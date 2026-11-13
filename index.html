@@ -159,18 +159,18 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
   <details>
     <summary>⚙️ سیٹنگ — آواز کا ماڈل</summary>
     <div class="model-opt">
-      <input type="radio" name="model" id="mTiny" value="Xenova/whisper-tiny">
-      <label for="mTiny"><b>چھوٹا (Tiny)</b><br><span>تقریباً 40MB — سب سے تیز، درستگی کم</span></label>
+      <input type="radio" name="model" id="mTiny" value="Xenova/whisper-tiny" checked>
+      <label for="mTiny"><b>چھوٹا (Tiny) — پہلی بار کے لیے تجویز کردہ</b><br><span>تقریباً 40MB — سب سے تیز ڈاؤن لوڈ، درستگی کم</span></label>
     </div>
     <div class="model-opt">
-      <input type="radio" name="model" id="mBase" value="Xenova/whisper-base" checked>
-      <label for="mBase"><b>درمیانہ (Base) — تجویز کردہ</b><br><span>تقریباً 74MB — رفتار اور درستگی کا بہترین توازن</span></label>
+      <input type="radio" name="model" id="mBase" value="Xenova/whisper-base">
+      <label for="mBase"><b>درمیانہ (Base)</b><br><span>تقریباً 74MB — زیادہ درست، ڈاؤن لوڈ بڑا</span></label>
     </div>
     <div class="model-opt">
       <input type="radio" name="model" id="mSmall" value="Xenova/whisper-small">
       <label for="mSmall"><b>بڑا (Small)</b><br><span>تقریباً 244MB — زیادہ درست، مگر سست اور زیادہ میموری</span></label>
     </div>
-    <p class="hint">ماڈل بدلنے پر نیا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا، پھر فون میں محفوظ رہے گا۔</p>
+    <p class="hint">ماڈل بدلنے پر نیا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا، پھر فون میں محفوظ رہے گا۔ ڈاؤن لوڈ حصوں میں ہوتا ہے — درمیان میں رک جائے تو دوبارہ وہیں سے شروع ہوگا، صفر سے نہیں۔</p>
   </details>
   <button class="btn btn-ghost hidden" id="installBtn">📲 فون میں انسٹال کریں</button>
   <p class="small" id="installHint">ایپ کو فون میں عام ایپ کی طرح رکھنے کے لیے: براؤزر کے ⋮ مینیو سے <b>Add to Home screen</b> منتخب کریں۔</p>
@@ -179,7 +179,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
 <div class="card">
   <h2>ℹ️ اہم باتیں</h2>
   <ul class="notes">
-    <li><b>پہلی بار:</b> آواز کا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا (درمیانے ماڈل کے لیے تقریباً 74MB)۔ اس کے بعد تحریر مکمل آف لائن ہوگی۔</li>
+    <li><b>پہلی بار:</b> آواز کا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا (چھوٹے ماڈل کے لیے تقریباً 44MB)۔ اس کے بعد تحریر مکمل آف لائن ہوگی۔ ڈاؤن لوڈ حصوں میں ہوتا ہے — اگر آپ دوسری ایپ کھول لیں یا ڈاؤن لوڈ رک جائے تو دوبارہ وہیں سے شروع ہوگا، صفر سے نہیں۔</li>
     <li><b>پشتو:</b> پشتو کی تحریر میں غلطیاں زیادہ ہوں گی — پشتو کے لیے یہ نظام ابھی کمزور ہے۔ اردو اور عربی بہت بہتر ہیں۔ تحریر قابلِ ترمیم ہے، غلطی درست کی جا سکتی ہے۔</li>
     <li><b>وقت:</b> لمبے بیان پر وقت لگے گا — عام فون پر تقریباً 10 منٹ کی آڈیو کے لیے چند منٹ۔ اسکرین کھلی رکھیں، ایپ بند نہ کریں۔</li>
     <li><b>Google Docs:</b> صرف Google Docs میں بھیجنے کے لیے انٹرنیٹ چاہیے۔ تحریر اور ورڈ فائل آف لائن بنتی ہیں۔</li>
@@ -221,7 +221,7 @@ const LANG_LABELS = {
 const RTL_LANGS = new Set(['ur', 'ps', 'ar']);
 
 let selectedLang = localStorage.getItem('bs-lang') || 'ur';
-let selectedModel = localStorage.getItem('bs-model') || 'Xenova/whisper-base';
+let selectedModel = localStorage.getItem('bs-model') || 'Xenova/whisper-tiny';
 let transcriber = null;
 let transcriberModel = null;
 let audioData = null;      // Float32Array @16kHz
@@ -408,16 +408,295 @@ function stopRecording() {
   if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
 }
 
+// ---------- resumable model downloader ----------
+// Why this exists: the Whisper model files are big (tiny ~44MB, base ~80MB,
+// small ~252MB including tokenizer files). A plain fetch restarts from zero
+// if Chrome is backgrounded or killed mid-download — on a slow connection the
+// user could never finish. So each file is downloaded in 5MB chunks (HTTP
+// Range), finished chunks are stored in IndexedDB as they complete, and a
+// later run downloads ONLY the missing chunks. Once a file is complete it is
+// assembled and put into the service worker's runtime cache under the EXACT
+// URL transformers.js requests, so the library finds it cached and never
+// re-downloads. File list verified against the transformers.js 2.17.2 source
+// (quantized encoder + merged decoder; tokenizer/config JSONs) and the
+// Hugging Face file API; Range + HEAD behaviour verified live against HF.
+const DL_CHUNK = 5 * 1024 * 1024; // 5 MB per chunk
+const DL_DB = 'bayan-scribe-dl';
+const DL_CACHE = 'bayan-scribe-runtime-v1'; // must match RUNTIME_CACHE in sw.js
+const DL_MAX_ATTEMPTS = 3;
+const MODEL_FILES = [
+  'config.json',
+  'generation_config.json',
+  'preprocessor_config.json',
+  'tokenizer.json',
+  'tokenizer_config.json',
+  'onnx/encoder_model_quantized.onnx',
+  'onnx/decoder_model_merged_quantized.onnx'
+];
+const HF_URL = (modelId, file) => 'https://huggingface.co/' + modelId + '/resolve/main/' + file;
+
+function dlErr(msg) { const e = new Error(msg); e.isDlUserError = true; return e; }
+function dlKey(modelId, file) { return modelId + '|' + file; }
+function dlChunkKey(modelId, file, i) { return modelId + '|' + file + '#' + i; }
+function dlContentType(file) {
+  return file.endsWith('.json') ? 'application/json' : 'application/octet-stream';
+}
+function dlSleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+// --- IndexedDB: finished chunks + per-file progress ---
+let dlDbPromise = null;
+function dlDb() {
+  if (dlDbPromise) return dlDbPromise;
+  dlDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DL_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('chunks')) db.createObjectStore('chunks', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dlDbPromise;
+}
+function dlIdb(store, mode, fn) {
+  return dlDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    let req;
+    try { req = fn(tx.objectStore(store)); } catch (e) { reject(e); return; }
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+const dlGet = (store, key) => dlIdb(store, 'readonly', (st) => st.get(key));
+const dlPut = (store, val) => dlIdb(store, 'readwrite', (st) => st.put(val));
+const dlDel = (store, key) => dlIdb(store, 'readwrite', (st) => st.delete(key));
+function dlDeleteByPrefix(store, prefix) {
+  return dlDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const range = IDBKeyRange.bound(prefix, prefix + '\uffff');
+    const req = tx.objectStore(store).openCursor(range);
+    req.onsuccess = () => {
+      const cur = req.result;
+      if (cur) { cur.delete(); cur.continue(); }
+    };
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+// --- screen wake lock during download ---
+let wakeLock = null;
+let dlDownloading = false;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) { wakeLock = null; }
+}
+function releaseWakeLock() {
+  try { if (wakeLock) wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && wakeLock === null && dlDownloading) requestWakeLock();
+});
+
+// --- file size: HEAD (Content-Length is CORS-readable); Range 0-0 fallback ---
+// Returns size in bytes, -1 if the file does not exist (404), null if unknown.
+async function dlFileSize(url) {
+  try {
+    const head = await fetch(url, { method: 'HEAD' });
+    if (head.status === 404) return -1;
+    if (head.ok) {
+      const len = head.headers.get('Content-Length');
+      if (len) return parseInt(len, 10);
+    }
+  } catch (e) { /* fall through to Range probe */ }
+  try {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-0' } });
+    if (r.status === 404) return -1;
+    if (r.status === 206) {
+      const cr = r.headers.get('Content-Range');
+      const m = cr && cr.match(/\/(\d+)\s*$/);
+      if (m) return parseInt(m[1], 10);
+    }
+  } catch (e) { /* unknown size */ }
+  return null;
+}
+
+// --- is this exact URL already cached anywhere (transformers cache or SW cache)? ---
+async function dlIsCached(url) {
+  try {
+    if (!('caches' in window)) return false;
+    const names = await caches.keys();
+    for (const n of names) {
+      const c = await caches.open(n);
+      if (await c.match(url)) return true;
+    }
+  } catch (e) { /* ignore */ }
+  return false;
+}
+
+// --- one chunk with retries. Returns {data} or {ignored:true} (server skipped Range). ---
+async function dlFetchChunk(url, start, end) {
+  const want = end - start + 1;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= DL_MAX_ATTEMPTS; attempt++) {
+    try {
+      const resp = await fetch(url, { headers: { Range: 'bytes=' + start + '-' + end } });
+      if (resp.status === 200) return { ignored: true };
+      if (resp.status !== 206) throw new Error('HTTP ' + resp.status);
+      const buf = await resp.arrayBuffer();
+      if (buf.byteLength !== want) throw new Error('chunk size mismatch');
+      return { data: buf };
+    } catch (e) {
+      lastErr = e;
+      if (attempt < DL_MAX_ATTEMPTS) await dlSleep(1000 * attempt);
+    }
+  }
+  throw lastErr;
+}
+
+// --- whole-file fallback (no Range support, or unknown size). Returns bytes saved. ---
+async function dlFullDownload(url, file) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const buf = await resp.arrayBuffer();
+  const cache = await caches.open(DL_CACHE);
+  await cache.put(url, new Response(buf, { headers: {
+    'Content-Type': dlContentType(file),
+    'Content-Length': String(buf.byteLength)
+  }}));
+  return buf.byteLength;
+}
+
+// --- one file: resume from IndexedDB, fetch missing chunks, assemble + cache ---
+async function dlEnsureFile(modelId, file, total, onBytes) {
+  const url = HF_URL(modelId, file);
+  const key = dlKey(modelId, file);
+  const totalChunks = Math.ceil(total / DL_CHUNK);
+  let meta = null;
+  try { meta = await dlGet('meta', key); } catch (e) { meta = null; }
+  let done = new Set();
+  if (meta && meta.total === total && meta.chunkSize === DL_CHUNK && Array.isArray(meta.done)) {
+    done = new Set(meta.done);
+  } else {
+    // First time, or the file changed size: drop any stale chunks and restart.
+    await dlDeleteByPrefix('chunks', dlChunkKey(modelId, file, '')).catch(() => {});
+    await dlPut('meta', { key, total, chunkSize: DL_CHUNK, done: [] }).catch(() => {});
+  }
+  let reported = 0;
+  for (const i of done) reported += Math.min(DL_CHUNK, total - i * DL_CHUNK);
+  if (onBytes && reported) onBytes(reported);
+  for (let i = 0; i < totalChunks; i++) {
+    if (done.has(i)) continue;
+    const start = i * DL_CHUNK;
+    const end = Math.min(total, start + DL_CHUNK) - 1;
+    let res;
+    try {
+      res = await dlFetchChunk(url, start, end);
+    } catch (e) {
+      throw dlErr('ڈاؤن لوڈ رک گیا ہے (حصہ ' + (i + 1) + '/' + totalChunks + ')۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں — جو حصہ ڈاؤن لوڈ ہو چکا ہے وہ محفوظ ہے، دوبارہ وہیں سے شروع ہوگا۔');
+    }
+    if (res.ignored) {
+      // Server does not honour Range: one plain full download instead.
+      await dlDeleteByPrefix('chunks', dlChunkKey(modelId, file, '')).catch(() => {});
+      await dlDel('meta', key).catch(() => {});
+      const n = await dlFullDownload(url, file);
+      if (onBytes) onBytes(Math.max(0, total - reported));
+      return n;
+    }
+    await dlPut('chunks', { key: dlChunkKey(modelId, file, i), data: res.data });
+    done.add(i);
+    reported += end - start + 1;
+    await dlPut('meta', { key, total, chunkSize: DL_CHUNK, done: Array.from(done) });
+    if (onBytes) onBytes(end - start + 1);
+  }
+  // All chunks present: assemble and cache under the exact transformers.js URL.
+  const parts = [];
+  for (let i = 0; i < totalChunks; i++) {
+    const rec = await dlGet('chunks', dlChunkKey(modelId, file, i));
+    if (!rec || !rec.data) throw dlErr('ڈاؤن لوڈ شدہ حصہ نہیں ملا — دوبارہ کوشش کریں۔');
+    parts.push(rec.data);
+  }
+  const blob = new Blob(parts, { type: dlContentType(file) });
+  const cache = await caches.open(DL_CACHE);
+  await cache.put(url, new Response(blob, { headers: {
+    'Content-Type': dlContentType(file),
+    'Content-Length': String(total)
+  }}));
+  // Free IndexedDB space now that the assembled file is cached.
+  await dlDeleteByPrefix('chunks', dlChunkKey(modelId, file, '')).catch(() => {});
+  await dlDel('meta', key).catch(() => {});
+  return total;
+}
+
+// --- whole model: check what's already cached, download only what's missing ---
+async function ensureModelDownloaded(modelId, onProgress) {
+  const plan = [];
+  let grandTotal = 0;
+  for (const file of MODEL_FILES) {
+    const url = HF_URL(modelId, file);
+    const total = await dlFileSize(url);
+    if (total === -1) continue; // file does not exist for this model — skip
+    const cached = await dlIsCached(url);
+    plan.push({ file, url, total, cached });
+    if (total) grandTotal += total;
+  }
+  let done = 0;
+  const report = () => { if (onProgress) onProgress(done, grandTotal); };
+  for (const p of plan) { if (p.cached && p.total) done += p.total; }
+  report();
+  if (plan.every((p) => p.cached)) return; // everything already on the phone
+  if (!navigator.onLine) {
+    throw dlErr('انٹرنیٹ نہیں ہے — ماڈل ڈاؤن لوڈ کے لیے انٹرنیٹ آن کریں۔ جو حصہ ڈاؤن لوڈ ہو چکا ہے وہ محفوظ ہے۔');
+  }
+  dlDownloading = true;
+  await requestWakeLock();
+  try {
+    for (const p of plan) {
+      if (p.cached) continue;
+      if (!p.total) {
+        const n = await dlFullDownload(p.url, p.file);
+        done += n; grandTotal += n; report();
+        continue;
+      }
+      await dlEnsureFile(modelId, p.file, p.total, (n) => { done += n; report(); });
+    }
+  } catch (e) {
+    if (e && e.isDlUserError) throw e;
+    throw dlErr('ڈاؤن لوڈ رک گیا ہے۔ انٹرنیٹ چیک کر کے دوبارہ کوشش کریں — جو حصہ ڈاؤن لوڈ ہو چکا ہے وہ محفوظ ہے، دوبارہ وہیں سے شروع ہوگا۔');
+  } finally {
+    dlDownloading = false;
+    releaseWakeLock();
+  }
+}
+
 // ---------- model load + transcribe ----------
 async function loadModel() {
   if (transcriber && transcriberModel === selectedModel) return transcriber;
+  // Resumable pre-download: fetch every model file in chunks first, so a
+  // download interrupted by switching apps resumes instead of restarting.
+  await ensureModelDownloaded(selectedModel, (doneBytes, totalBytes) => {
+    if (!totalBytes) return;
+    const pct = Math.round((doneBytes / totalBytes) * 100);
+    setBar(pct);
+    setStatus('ڈاؤن لوڈ جاری ہے — ایپ کھلی رکھیں۔ ' + pct + '% (' +
+      (doneBytes / 1048576).toFixed(1) + ' / ' + (totalBytes / 1048576).toFixed(1) + ' MB)' +
+      '<br><span class="small">اگر آپ دوسری ایپ کھول لیں تو بھی ڈاؤن لوڈ وہیں سے دوبارہ شروع ہوگا جہاں رکا تھا۔</span>');
+  });
   setStatus('آواز کا ماڈل تیار ہو رہا ہے…');
   transcriber = await pipeline('automatic-speech-recognition', selectedModel, {
     progress_callback: (p) => {
       if (p.status === 'progress' && p.total) {
         const pct = Math.round((p.loaded / p.total) * 100);
         setBar(pct);
-        setStatus('ماڈل ڈاؤن لوڈ ہو رہا ہے… ' + pct + '% — پہلی بار انٹرنیٹ درکار ہے۔');
+        setStatus('ماڈل لوڈ ہو رہا ہے… ' + pct + '%');
       } else if (p.status === 'initiate') {
         setStatus('ماڈل لوڈ ہو رہا ہے… ' + (p.file || ''));
       } else if (p.status === 'done') {
@@ -469,9 +748,9 @@ $('startBtn').addEventListener('click', async () => {
     setStatus('<span class="ok">تحریر مکمل ✓</span> — ' + mins + ' منٹ میں۔ اب نیچے سے ورڈ فائل یا سب ٹائٹل لے سکتے ہیں۔');
   } catch (err) {
     console.error(err);
-    setStatus('<span class="err">تحریر نہیں ہو سکی: ' +
-      (err && err.message ? err.message : 'نامعلوم خرابی') +
-      '۔ پہلی بار انٹرنیٹ آن کر کے دوبارہ کوشش کریں۔</span>');
+    const msg = (err && err.message) ? err.message : 'نامعلوم خرابی';
+    const suffix = (err && err.isDlUserError) ? '' : '۔ پہلی بار انٹرنیٹ آن کر کے دوبارہ کوشش کریں۔';
+    setStatus('<span class="err">تحریر نہیں ہو سکی: ' + msg + suffix + '</span>');
   } finally {
     busy = false;
     $('startBtn').disabled = !audioData;
