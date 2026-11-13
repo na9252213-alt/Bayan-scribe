@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1811">
+<meta name="description" content="بیان اسکرائب — بیان، کلپ اور آڈیو کی مفت آف لائن تحریر۔ اردو، پشتو، عربی اور انگریزی۔">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>بیان اسکرائب — Bayan Scribe</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" defer></script>
+<style>
+:root{
+  --bg:#0b1811; --card:#14261a; --card2:#1b2f22; --border:#2c4636;
+  --text:#f2f5f2; --muted:#9db8a6; --gold:#f2b63c; --gold-dim:rgba(242,182,60,.14);
+  --green:#34c77b; --red:#e5484d; --blue:#5aa9ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Nastaliq Urdu","Noto Naskh Arabic",sans-serif;}
+body{max-width:640px;margin:0 auto;padding:16px 16px 40px;}
+h1{font-size:34px;margin:6px 0 2px;line-height:1.4}
+.tagline{color:var(--gold);font-size:20px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:15px;line-height:1.9;margin:0 0 12px}
+.pill{display:inline-block;border:1px solid var(--green);color:var(--green);
+  border-radius:999px;padding:3px 14px;font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px;margin:12px 0}
+.card h2{font-size:17px;margin:0 0 10px}
+.hint{color:var(--muted);font-size:13.5px;line-height:1.9}
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.lang{border:1.5px solid var(--border);border-radius:12px;background:var(--card2);
+  padding:12px 4px;text-align:center;cursor:pointer;user-select:none}
+.lang .native{font-size:21px;line-height:1.6}
+.lang .sub2{font-size:12px;color:var(--muted)}
+.lang.sel{border-color:var(--gold);background:var(--gold-dim)}
+.lang.sel .native{color:var(--gold)}
+.tabs{display:flex;background:var(--card2);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin:4px 0 12px}
+.tab{flex:1;text-align:center;padding:12px 4px;cursor:pointer;font-size:16px;color:var(--muted)}
+.tab.sel{background:var(--gold-dim);color:var(--gold);font-weight:700;
+  box-shadow:inset 0 -3px 0 var(--gold)}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:22px 10px;
+  text-align:center;cursor:pointer;color:var(--muted)}
+.drop:hover{border-color:var(--gold)}
+.drop b{color:var(--text);font-size:17px}
+.fileinfo{font-size:14px;line-height:1.9;margin-top:10px}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;
+  font-size:17px;font-weight:700;cursor:pointer;margin:10px 0;font-family:inherit}
+.btn-gold{background:var(--gold);color:#231a00}
+.btn-ghost{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+.btn-green{background:var(--green);color:#03240f}
+.btn-blue{background:#1d4ed8;color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-row .btn{margin:4px 0;font-size:15px;padding:12px}
+.mic-wrap{text-align:center;padding:10px 0 4px}
+.mic{width:104px;height:104px;border-radius:50%;border:none;background:var(--gold);
+  font-size:44px;cursor:pointer;box-shadow:0 6px 24px rgba(242,182,60,.35)}
+.mic.rec{background:var(--red);animation:pulse 1.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}100%{box-shadow:0 0 0 22px rgba(229,72,77,0)}}
+.timer{font-size:26px;margin:8px 0;font-variant-numeric:tabular-nums}
+.progress{height:10px;background:var(--card2);border:1px solid var(--border);
+  border-radius:99px;overflow:hidden;margin:8px 0}
+.progress > div{height:100%;background:var(--gold);width:0%;transition:width .3s}
+.status{font-size:14px;line-height:1.9;min-height:26px}
+.status .ok{color:var(--green)}
+.status .warn{color:var(--gold)}
+.status .err{color:var(--red)}
+textarea{width:100%;min-height:230px;background:#0e1f15;color:var(--text);
+  border:1px solid var(--border);border-radius:12px;padding:14px;
+  font-size:19px;line-height:2.1;font-family:inherit;resize:vertical}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:6px}
+details{margin:8px 0}
+summary{cursor:pointer;font-size:16px;padding:6px 0}
+.model-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 0;
+  border-top:1px solid var(--border)}
+.model-opt input{margin-top:6px;accent-color:var(--gold)}
+.model-opt b{font-size:15px}
+.model-opt span{color:var(--muted);font-size:13px;line-height:1.8}
+.notes{font-size:14px;line-height:2.05}
+.notes li{margin-bottom:8px}
+.notes b{color:var(--gold)}
+.offline-badge{display:none;color:var(--gold);font-size:13px}
+body.offline .offline-badge{display:inline}
+.hidden{display:none!important}
+.small{font-size:13px;color:var(--muted);line-height:1.9}
+hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+</style>
+</head>
+<body>
+<h1>بیان اسکرائب</h1>
+<p class="tagline">بولیں، لکھیں — Bayan Scribe</p>
+<p class="sub">بیان، کلپ یا آڈیو اپ لوڈ کریں — تحریر خود بن جائے گی۔ اردو، پشتو، عربی اور انگریزی میں۔ تحریر آپ کے فون میں ہی بنتی ہے، کہیں بھیجی نہیں جاتی۔</p>
+<div><span class="pill">مفت &nbsp;•&nbsp; مکمل آف لائن &nbsp;•&nbsp; آپ کے فون میں</span>
+<span class="offline-badge"> &nbsp;● آف لائن ہیں — ماڈل ڈاؤن لوڈ شدہ ہو تو تحریر چلے گی</span></div>
+
+<div class="card">
+  <h2>آپ کس زبان میں بول رہے ہیں؟</h2>
+  <div class="lang-grid" id="langGrid">
+    <div class="lang sel" data-lang="ur"><div class="native">اردو</div><div class="sub2">Urdu</div></div>
+    <div class="lang" data-lang="ps"><div class="native">پښتو</div><div class="sub2">Pashto</div></div>
+    <div class="lang" data-lang="ar"><div class="native">العربية</div><div class="sub2">Arabic</div></div>
+    <div class="lang" data-lang="en"><div class="native">English</div><div class="sub2">انگریزی</div></div>
+    <div class="lang" data-lang="auto"><div class="native">خودکار</div><div class="sub2">Auto-detect</div></div>
+  </div>
+  <p class="hint" id="langHint">اردو منتخب ہے۔ تحریر اردو رسم الخط میں بنے گی۔</p>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab sel" id="tabUpload">فائل اپ لوڈ کریں</div>
+    <div class="tab" id="tabRecord">ریکارڈ کریں</div>
+  </div>
+
+  <div id="paneUpload">
+    <div class="drop" id="dropZone">
+      <b>آڈیو یا ویڈیو فائل منتخب کریں</b><br>
+      <span class="small">بیان کا کلپ، آڈیو یا ویڈیو — لمبائی کی کوئی حد نہیں (لمبی فائل پر وقت زیادہ لگے گا)</span>
+    </div>
+    <input type="file" id="fileInput" accept="audio/*,video/*" class="hidden">
+    <div class="fileinfo" id="fileInfo"></div>
+  </div>
+
+  <div id="paneRecord" class="hidden">
+    <div class="mic-wrap">
+      <button class="mic" id="micBtn" aria-label="ریکارڈ">🎙️</button>
+      <div class="timer" id="recTimer">00:00</div>
+      <div class="small" id="recHint">ریکارڈ شروع کرنے کے لیے مائیک دبائیں</div>
+    </div>
+    <div class="fileinfo" id="recInfo"></div>
+  </div>
+
+  <button class="btn btn-gold" id="startBtn" disabled>تحریر شروع کریں</button>
+  <div class="progress"><div id="barFill"></div></div>
+  <div class="status" id="status">فائل منتخب کریں یا ریکارڈ کریں۔</div>
+  <div class="small" id="modelStatus"></div>
+</div>
+
+<div class="card">
+  <h2>تحریر <span class="small">(قابلِ ترمیم — غلطی ہو تو یہیں درست کر لیں)</span></h2>
+  <textarea id="transcript" placeholder="یہاں تحریر ظاہر ہوگی…" dir="auto"></textarea>
+  <div class="meta"><span id="wordCount">0 الفاظ</span><span id="saveState"></span></div>
+  <hr class="sep">
+  <div class="btn-row">
+    <button class="btn btn-green" id="docxBtn">ورڈ فائل (docx) ڈاؤن لوڈ کریں</button>
+    <button class="btn btn-ghost" id="srtBtn">سب ٹائٹل (SRT) ڈاؤن لوڈ کریں</button>
+    <button class="btn btn-ghost" id="copyBtn">متن کاپی کریں</button>
+    <button class="btn btn-blue" id="docsBtn">Google Docs میں بھیجیں</button>
+  </div>
+  <p class="small">Google Docs میں بھیجنے کے لیے انٹرنیٹ درکار ہے۔ باقی سب کچھ آف لائن کام کرتا ہے۔</p>
+</div>
+
+<div class="card">
+  <details>
+    <summary>⚙️ سیٹنگ — آواز کا ماڈل</summary>
+    <div class="model-opt">
+      <input type="radio" name="model" id="mTiny" value="Xenova/whisper-tiny">
+      <label for="mTiny"><b>چھوٹا (Tiny)</b><br><span>تقریباً 40MB — سب سے تیز، درستگی کم</span></label>
+    </div>
+    <div class="model-opt">
+      <input type="radio" name="model" id="mBase" value="Xenova/whisper-base" checked>
+      <label for="mBase"><b>درمیانہ (Base) — تجویز کردہ</b><br><span>تقریباً 74MB — رفتار اور درستگی کا بہترین توازن</span></label>
+    </div>
+    <div class="model-opt">
+      <input type="radio" name="model" id="mSmall" value="Xenova/whisper-small">
+      <label for="mSmall"><b>بڑا (Small)</b><br><span>تقریباً 244MB — زیادہ درست، مگر سست اور زیادہ میموری</span></label>
+    </div>
+    <p class="hint">ماڈل بدلنے پر نیا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا، پھر فون میں محفوظ رہے گا۔</p>
+  </details>
+  <button class="btn btn-ghost hidden" id="installBtn">📲 فون میں انسٹال کریں</button>
+  <p class="small" id="installHint">ایپ کو فون میں عام ایپ کی طرح رکھنے کے لیے: براؤزر کے ⋮ مینیو سے <b>Add to Home screen</b> منتخب کریں۔</p>
+</div>
+
+<div class="card">
+  <h2>ℹ️ اہم باتیں</h2>
+  <ul class="notes">
+    <li><b>پہلی بار:</b> آواز کا ماڈل ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا (درمیانے ماڈل کے لیے تقریباً 74MB)۔ اس کے بعد تحریر مکمل آف لائن ہوگی۔</li>
+    <li><b>پشتو:</b> پشتو کی تحریر میں غلطیاں زیادہ ہوں گی — پشتو کے لیے یہ نظام ابھی کمزور ہے۔ اردو اور عربی بہت بہتر ہیں۔ تحریر قابلِ ترمیم ہے، غلطی درست کی جا سکتی ہے۔</li>
+    <li><b>وقت:</b> لمبے بیان پر وقت لگے گا — عام فون پر تقریباً 10 منٹ کی آڈیو کے لیے چند منٹ۔ اسکرین کھلی رکھیں، ایپ بند نہ کریں۔</li>
+    <li><b>Google Docs:</b> صرف Google Docs میں بھیجنے کے لیے انٹرنیٹ چاہیے۔ تحریر اور ورڈ فائل آف لائن بنتی ہیں۔</li>
+  </ul>
+</div>
+
+<p class="small" style="text-align:center">بیان اسکرائب — مفت، آف لائن، نجی۔ آپ کی آواز آپ کے فون سے باہر نہیں جاتی۔</p>
+
+<script>
+  // If the transcription library cannot load (e.g. first visit while offline),
+  // tell the user plainly instead of failing silently.
+  window.__bsReady = false;
+  setTimeout(function () {
+    if (!window.__bsReady) {
+      var s = document.getElementById('status');
+      if (s) s.innerHTML = '<span class="err">تحریر کی لائبریری لوڈ نہیں ہوئی۔ پہلی بار انٹرنیٹ آن کر کے ایپ کھولیں، پھر یہ آف لائن چلے گی۔</span>';
+    }
+  }, 12000);
+</script>
+
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+try {
+  const cores = Math.max(1, Math.min(4, navigator.hardwareConcurrency || 2));
+  env.backends.onnx.wasm.numThreads = cores;
+} catch (e) { /* keep defaults */ }
+
+const $ = (id) => document.getElementById(id);
+const LANG_LABELS = {
+  ur: 'اردو منتخب ہے۔ تحریر اردو رسم الخط میں بنے گی۔',
+  ps: 'پشتو منتخب ہے۔ نوٹ: پشتو کی تحریر میں غلطیاں زیادہ ہو سکتی ہیں — تحریر قابلِ ترمیم ہے۔',
+  ar: 'عربی منتخب ہے۔ تحریر عربی رسم الخط میں بنے گی۔',
+  en: 'انگریزی منتخب ہے۔ تحریر انگریزی میں بنے گی۔',
+  auto: 'خودکار: زبان خود پہچانی جائے گی۔ درست نتائج کے لیے زبان خود منتخب کرنا بہتر ہے۔'
+};
+const RTL_LANGS = new Set(['ur', 'ps', 'ar']);
+
+let selectedLang = localStorage.getItem('bs-lang') || 'ur';
+let selectedModel = localStorage.getItem('bs-model') || 'Xenova/whisper-base';
+let transcriber = null;
+let transcriberModel = null;
+let audioData = null;      // Float32Array @16kHz
+let audioDuration = 0;     // seconds
+let audioName = '';
+let chunks = JSON.parse(localStorage.getItem('bs-chunks') || 'null') || [];
+let busy = false;
+
+window.__bsReady = true;
+
+// ---------- helpers ----------
+function setStatus(html) { $('status').innerHTML = html; }
+function setBar(pct) { $('barFill').style.width = Math.max(0, Math.min(100, pct)) + '%'; }
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const m = String(Math.floor(sec / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return m + ':' + s;
+}
+function fmtSrtTime(sec) {
+  const ms = Math.floor((sec % 1) * 1000);
+  const total = Math.floor(sec);
+  const h = String(Math.floor(total / 3600)).padStart(2, '0');
+  const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  return h + ':' + m + ':' + s + ',' + String(ms).padStart(3, '0');
+}
+function updateWordCount() {
+  const t = $('transcript').value.trim();
+  $('wordCount').textContent = (t ? t.split(/\s+/).length : 0) + ' الفاظ';
+}
+function saveTranscript() {
+  localStorage.setItem('bs-transcript', $('transcript').value);
+  localStorage.setItem('bs-chunks', JSON.stringify(chunks));
+  $('saveState').textContent = 'محفوظ ✓';
+  setTimeout(() => { $('saveState').textContent = ''; }, 1500);
+}
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+function stamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+
+// ---------- language picker ----------
+document.querySelectorAll('#langGrid .lang').forEach((el) => {
+  if (el.dataset.lang === selectedLang) el.classList.add('sel');
+  else el.classList.remove('sel');
+  el.addEventListener('click', () => {
+    document.querySelectorAll('#langGrid .lang').forEach((e) => e.classList.remove('sel'));
+    el.classList.add('sel');
+    selectedLang = el.dataset.lang;
+    localStorage.setItem('bs-lang', selectedLang);
+    $('langHint').textContent = LANG_LABELS[selectedLang];
+    $('transcript').dir = RTL_LANGS.has(selectedLang) ? 'rtl' : 'ltr';
+  });
+});
+$('langHint').textContent = LANG_LABELS[selectedLang];
+$('transcript').dir = RTL_LANGS.has(selectedLang) ? 'rtl' : 'ltr';
+
+// ---------- model picker ----------
+document.querySelectorAll('input[name="model"]').forEach((r) => {
+  r.checked = (r.value === selectedModel);
+  r.addEventListener('change', () => {
+    selectedModel = r.value;
+    localStorage.setItem('bs-model', selectedModel);
+    transcriber = null; transcriberModel = null;
+    checkModelCached();
+  });
+});
+
+// ---------- tabs ----------
+$('tabUpload').addEventListener('click', () => {
+  $('tabUpload').classList.add('sel'); $('tabRecord').classList.remove('sel');
+  $('paneUpload').classList.remove('hidden'); $('paneRecord').classList.add('hidden');
+});
+$('tabRecord').addEventListener('click', () => {
+  $('tabRecord').classList.add('sel'); $('tabUpload').classList.remove('sel');
+  $('paneRecord').classList.remove('hidden'); $('paneUpload').classList.add('hidden');
+});
+
+// ---------- audio decode (to 16kHz mono) ----------
+async function decodeTo16k(arrayBuffer, name) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC({ sampleRate: 16000 });
+  try {
+    const buf = await ctx.decodeAudioData(arrayBuffer);
+    let data = buf.getChannelData(0);
+    if (buf.sampleRate !== 16000) {
+      // Fallback resample (linear) if the context ignored the requested rate.
+      const ratio = buf.sampleRate / 16000;
+      const out = new Float32Array(Math.floor(data.length / ratio));
+      for (let i = 0; i < out.length; i++) {
+        const pos = i * ratio, i0 = Math.floor(pos), f = pos - i0;
+        out[i] = data[i0] * (1 - f) + (data[Math.min(i0 + 1, data.length - 1)] * f);
+      }
+      data = out;
+    }
+    return data;
+  } finally {
+    try { await ctx.close(); } catch (e) {}
+  }
+}
+
+function setAudio(data, durationSec, name) {
+  audioData = data;
+  audioDuration = durationSec;
+  audioName = name;
+  $('startBtn').disabled = false;
+  setStatus('تیار ہے: <b>' + name + '</b> — مدت ' + fmtTime(durationSec) +
+    (durationSec > 2700 ? ' <span class="warn">(لمبی فائل — تحریر میں کافی وقت لگے گا، فون کی میموری بھی زیادہ استعمال ہوگی)</span>' : ''));
+}
+
+// ---------- upload ----------
+$('dropZone').addEventListener('click', () => $('fileInput').click());
+$('dropZone').addEventListener('dragover', (e) => { e.preventDefault(); });
+$('dropZone').addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+$('fileInput').addEventListener('change', (e) => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+  if (busy) return;
+  setStatus('فائل پڑھی جا رہی ہے…');
+  setBar(0);
+  $('fileInfo').innerHTML = '<b>' + file.name + '</b><br>سائز: ' + (file.size / 1048576).toFixed(1) + ' MB';
+  try {
+    const buf = await file.arrayBuffer();
+    const data = await decodeTo16k(buf, file.name);
+    setAudio(data, data.length / 16000, file.name);
+  } catch (err) {
+    setStatus('<span class="err">فائل نہیں کھل سکی۔ کوئی اور آڈیو/ویڈیو فائل آزمائیں (mp3، m4a، wav، mp4)۔</span>');
+  }
+}
+
+// ---------- recording ----------
+let mediaRecorder = null, recChunks = [], recStart = 0, recTimerId = null;
+$('micBtn').addEventListener('click', async () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') { stopRecording(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((m) =>
+      window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recChunks = [];
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      clearInterval(recTimerId);
+      $('micBtn').classList.remove('rec');
+      $('recHint').textContent = 'ریکارڈنگ محفوظ ہو گئی — اب تحریر شروع کریں';
+      const blob = new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      $('recInfo').innerHTML = 'ریکارڈنگ: ' + fmtTime((Date.now() - recStart) / 1000);
+      try {
+        const buf = await blob.arrayBuffer();
+        const data = await decodeTo16k(buf, 'recording');
+        setAudio(data, data.length / 16000, 'ریکارڈنگ (' + fmtTime(data.length / 16000) + ')');
+      } catch (err) {
+        setStatus('<span class="err">ریکارڈنگ نہیں کھل سکی — دوبارہ کوشش کریں۔</span>');
+      }
+    };
+    mediaRecorder.start();
+    recStart = Date.now();
+    $('micBtn').classList.add('rec');
+    $('recHint').textContent = 'ریکارڈ ہو رہا ہے… روکنے کے لیے دوبارہ دبائیں';
+    recTimerId = setInterval(() => {
+      $('recTimer').textContent = fmtTime((Date.now() - recStart) / 1000);
+    }, 500);
+  } catch (err) {
+    setStatus('<span class="err">مائیک کی اجازت نہیں ملی۔ براؤزر کی سیٹنگ میں مائیک کی اجازت دیں۔</span>');
+  }
+});
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+}
+
+// ---------- model load + transcribe ----------
+async function loadModel() {
+  if (transcriber && transcriberModel === selectedModel) return transcriber;
+  setStatus('آواز کا ماڈل تیار ہو رہا ہے…');
+  transcriber = await pipeline('automatic-speech-recognition', selectedModel, {
+    progress_callback: (p) => {
+      if (p.status === 'progress' && p.total) {
+        const pct = Math.round((p.loaded / p.total) * 100);
+        setBar(pct);
+        setStatus('ماڈل ڈاؤن لوڈ ہو رہا ہے… ' + pct + '% — پہلی بار انٹرنیٹ درکار ہے۔');
+      } else if (p.status === 'initiate') {
+        setStatus('ماڈل لوڈ ہو رہا ہے… ' + (p.file || ''));
+      } else if (p.status === 'done') {
+        setStatus('ماڈل تیار ہے۔');
+      }
+    }
+  });
+  transcriberModel = selectedModel;
+  checkModelCached();
+  return transcriber;
+}
+
+$('startBtn').addEventListener('click', async () => {
+  if (busy || !audioData) return;
+  busy = true;
+  $('startBtn').disabled = true;
+  $('transcript').value = '';
+  chunks = [];
+  updateWordCount();
+  const totalChunks = Math.max(1, Math.ceil(audioDuration / 30));
+  let doneChunks = 0;
+  try {
+    const model = await loadModel();
+    setStatus('تحریر ہو رہی ہے… اسکرین کھلی رکھیں۔');
+    const opts = {
+      task: 'transcribe',
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      return_timestamps: true,
+      chunk_callback: () => {
+        doneChunks++;
+        setBar(Math.round((doneChunks / totalChunks) * 100));
+        setStatus('تحریر ہو رہی ہے… حصہ ' + doneChunks + ' / تقریباً ' + totalChunks);
+      }
+    };
+    if (selectedLang !== 'auto') opts.language = selectedLang;
+    const t0 = Date.now();
+    const result = await model(audioData, opts);
+    chunks = (result.chunks || []).map((c) => ({
+      start: c.timestamp ? c.timestamp[0] : 0,
+      end: c.timestamp ? c.timestamp[1] : 0,
+      text: (c.text || '').trim()
+    })).filter((c) => c.text);
+    $('transcript').value = (result.text || '').trim();
+    updateWordCount();
+    saveTranscript();
+    setBar(100);
+    const mins = ((Date.now() - t0) / 60000).toFixed(1);
+    setStatus('<span class="ok">تحریر مکمل ✓</span> — ' + mins + ' منٹ میں۔ اب نیچے سے ورڈ فائل یا سب ٹائٹل لے سکتے ہیں۔');
+  } catch (err) {
+    console.error(err);
+    setStatus('<span class="err">تحریر نہیں ہو سکی: ' +
+      (err && err.message ? err.message : 'نامعلوم خرابی') +
+      '۔ پہلی بار انٹرنیٹ آن کر کے دوبارہ کوشش کریں۔</span>');
+  } finally {
+    busy = false;
+    $('startBtn').disabled = !audioData;
+  }
+});
+
+// ---------- exports ----------
+$('docxBtn').addEventListener('click', async () => {
+  const text = $('transcript').value.trim();
+  if (!text) { setStatus('<span class="warn">پہلے کوئی تحریر بنائیں یا لکھیں۔</span>'); return; }
+  if (typeof docx === 'undefined') {
+    setStatus('<span class="err">ورڈ بنانے والی لائبریری لوڈ نہیں ہوئی — ایک بار انٹرنیٹ آن کر کے ایپ کھولیں۔</span>');
+    return;
+  }
+  try {
+    const paras = text.split(/\n\s*\n/).filter((p) => p.trim());
+    const children = [
+      new docx.Paragraph({
+        alignment: docx.AlignmentType.RIGHT, bidirectional: true,
+        children: [new docx.TextRun({ text: 'بیان کی تحریر', bold: true, size: 36 })]
+      }),
+      new docx.Paragraph({
+        alignment: docx.AlignmentType.RIGHT, bidirectional: true,
+        children: [new docx.TextRun({ text: new Date().toLocaleDateString('ur-PK'), size: 22, color: '666666' })]
+      }),
+      new docx.Paragraph({ text: '' })
+    ];
+    for (const p of paras) {
+      children.push(new docx.Paragraph({
+        alignment: docx.AlignmentType.RIGHT, bidirectional: true,
+        spacing: { after: 200 },
+        children: [new docx.TextRun({ text: p.trim(), size: 28 })]
+      }));
+    }
+    const doc = new docx.Document({ sections: [{ children }] });
+    const blob = await docx.Packer.toBlob(doc);
+    downloadBlob(blob, 'bayan-transcript-' + stamp() + '.docx');
+    setStatus('<span class="ok">ورڈ فائل ڈاؤن لوڈ ہو گئی ✓</span>');
+  } catch (err) {
+    setStatus('<span class="err">ورڈ فائل نہیں بن سکی — دوبارہ کوشش کریں۔</span>');
+  }
+});
+
+$('srtBtn').addEventListener('click', () => {
+  if (!chunks.length) {
+    setStatus('<span class="warn">سب ٹائٹل کے لیے پہلے تحریر بنائیں (اوقات تحریر کے ساتھ محفوظ ہوتے ہیں)۔</span>');
+    return;
+  }
+  let srt = '';
+  chunks.forEach((c, i) => {
+    srt += (i + 1) + '\n' + fmtSrtTime(c.start) + ' --> ' + fmtSrtTime(c.end) + '\n' + c.text + '\n\n';
+  });
+  downloadBlob(new Blob([srt], { type: 'text/plain;charset=utf-8' }), 'bayan-subtitles-' + stamp() + '.srt');
+  setStatus('<span class="ok">سب ٹائٹل فائل ڈاؤن لوڈ ہو گئی ✓</span>');
+});
+
+$('copyBtn').addEventListener('click', async () => {
+  const text = $('transcript').value;
+  if (!text.trim()) { setStatus('<span class="warn">کاپی کرنے کے لیے کوئی تحریر نہیں ہے۔</span>'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus('<span class="ok">متن کاپی ہو گیا ✓</span>');
+  } catch (e) {
+    $('transcript').select();
+    document.execCommand('copy');
+    setStatus('<span class="ok">متن کاپی ہو گیا ✓</span>');
+  }
+});
+
+$('docsBtn').addEventListener('click', async () => {
+  const text = $('transcript').value.trim();
+  if (!text) { setStatus('<span class="warn">پہلے کوئی تحریر بنائیں یا لکھیں۔</span>'); return; }
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'بیان کی تحریر', text });
+      setStatus('<span class="ok">شیئر کھل گیا — فہرست سے Google Docs منتخب کریں۔</span>');
+      return;
+    } catch (e) { /* user cancelled or share failed — fall through */ }
+  }
+  try { await navigator.clipboard.writeText(text); } catch (e) {}
+  window.open('https://docs.google.com/create', '_blank');
+  setStatus('متن کاپی ہو گیا ہے — نئے Google Docs میں پیسٹ کر لیں۔ <span class="warn">(انٹرنیٹ درکار ہے)</span>');
+});
+
+// ---------- restore saved transcript ----------
+(function restore() {
+  const saved = localStorage.getItem('bs-transcript');
+  if (saved) { $('transcript').value = saved; updateWordCount(); }
+})();
+$('transcript').addEventListener('input', () => { updateWordCount(); saveTranscript(); });
+
+// ---------- model cache status ----------
+async function checkModelCached() {
+  try {
+    if (!('caches' in window)) return;
+    const names = await caches.keys();
+    let found = false;
+    for (const n of names) {
+      const c = await caches.open(n);
+      const keys = await c.keys();
+      if (keys.some((r) => r.url.includes(selectedModel.split('/')[1]))) { found = true; break; }
+    }
+    $('modelStatus').innerHTML = found
+      ? '<span class="ok">✓ منتخب ماڈل فون میں محفوظ ہے — تحریر آف لائن چلے گی۔</span>'
+      : '<span class="warn">منتخب ماڈل ابھی ڈاؤن لوڈ نہیں ہوا — پہلی تحریر پر ایک بار انٹرنیٹ سے ڈاؤن لوڈ ہوگا۔</span>';
+  } catch (e) { /* ignore */ }
+}
+checkModelCached();
+
+// ---------- offline indicator + install ----------
+function updateOnline() { document.body.classList.toggle('offline', !navigator.onLine); }
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+updateOnline();
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  $('installBtn').classList.remove('hidden');
+  $('installHint').classList.add('hidden');
+});
+$('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  $('installBtn').classList.add('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  $('installBtn').classList.add('hidden');
+  setStatus('<span class="ok">ایپ انسٹال ہو گئی ✓ — اب یہ آپ کے فون میں عام ایپ کی طرح نظر آئے گی۔</span>');
+});
+
+// ---------- service worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
